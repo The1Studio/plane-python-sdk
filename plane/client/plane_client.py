@@ -3,6 +3,7 @@ from ..api.customers import Customers
 from ..api.cycles import Cycles
 from ..api.epics import Epics
 from ..api.estimates import Estimates
+from ..api.github import GithubConfig
 from ..api.initiatives import Initiatives
 from ..api.intake import Intake
 from ..api.labels import Labels
@@ -77,6 +78,7 @@ class PlaneClient:
         self.teamspaces = Teamspaces(self.config)
         self.workflows = Workflows(self.config)
         self.workload = Workload(self.config)
+        self.github_config = GithubConfig(self.config)
         self.project_templates = ProjectTemplates(self.config)
         self.workspace_templates = WorkspaceTemplates(self.config)
         self.workspace_work_item_types = WorkspaceWorkItemTypes(self.config)

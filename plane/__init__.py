@@ -1,6 +1,7 @@
 from .api.agent_runs import AgentRuns
 from .api.cycles import Cycles
 from .api.estimates import Estimates
+from .api.github import GithubConfig
 from .api.initiatives import Initiatives
 from .api.labels import Labels
 from .api.milestones import Milestones
@@ -40,6 +41,12 @@ from .errors.errors import (
     HttpError,
     PlaneError,
     WorkloadParentHasChildrenError,
+)
+from .models.github import (
+    DEFAULT_STATE_TRANSITION_RULES,
+    GITHUB_EVENT_KEYS,
+    GithubEventKey,
+    StateTransitionRules,
 )
 from .models.project_templates import (
     CreatePageTemplate,
@@ -87,6 +94,7 @@ __all__ = [
     "WorkflowStates",
     "WorkflowTransitions",
     "Workload",
+    "GithubConfig",
     "ProjectTemplates",
     "ProjectWorkItemTemplates",
     "ProjectPageTemplates",
@@ -123,4 +131,9 @@ __all__ = [
     "PageTemplate",
     "CreatePageTemplate",
     "UpdatePageTemplate",
+    # github_ext models
+    "GithubEventKey",
+    "GITHUB_EVENT_KEYS",
+    "DEFAULT_STATE_TRANSITION_RULES",
+    "StateTransitionRules",
 ]

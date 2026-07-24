@@ -10,9 +10,14 @@ from ..errors.errors import HttpError
 
 
 class BaseResource:
-    def __init__(self, config: Configuration, base_path: str) -> None:
+    def __init__(self, config: Configuration, base_path: str, *, versioned: bool = True) -> None:
         self.config = config
         self.base_path = base_path.rstrip("/")
+        # Almost every resource is mounted under the versioned /api/v1/ root
+        # (``config.base_path``). A small number of fork add-on endpoints
+        # (e.g. github_ext) mount directly under /api/ instead — pass
+        # ``versioned=False`` to target ``config.root_path`` there.
+        self._root_path = config.base_path if versioned else config.root_path
         self.session = requests.Session()
 
         if self.config.retry:
@@ -36,9 +41,7 @@ class BaseResource:
         )
         return self._handle_response(response)
 
-    def _post(
-        self, endpoint: str, data: Mapping[str, Any] | list[Any] | None = None
-    ) -> Any:
+    def _post(self, endpoint: str, data: Mapping[str, Any] | list[Any] | None = None) -> Any:
         url = self._build_url(endpoint)
         response = self.session.post(
             url, headers=self._headers(), json=data, timeout=self.config.timeout
@@ -69,7 +72,7 @@ class BaseResource:
     # Helpers
     def _build_url(self, endpoint: str) -> str:
         endpoint = endpoint.strip("/")
-        base = f"{self.config.base_path.rstrip('/')}{self.base_path}/"
+        base = f"{self._root_path.rstrip('/')}{self.base_path}/"
         return f"{base}{endpoint}/" if endpoint else base
 
     def _headers(self) -> dict[str, str]:
