@@ -94,6 +94,28 @@ class WorkItems(BaseResource):
             workspace_slug: The workspace slug identifier
             project_id: UUID of the project
             data: Work item data
+
+        Note:
+            The server fills two fields when the request does not carry them: an
+            absent ``assignees`` assigns the authenticated caller (the project's own
+            ``default_assignee`` still takes precedence, and a caller who is not an
+            active project member is skipped), and an absent ``target_date`` becomes
+            today in the CALLER's ``user_timezone`` — or ``start_date``, when that is
+            later, so a future start date can never trip the server's "Start date
+            cannot exceed target date" validation.
+
+            **An absent field and an explicitly empty one are not the same thing.**
+            ``assignees=[]`` means "deliberately nobody" and is honoured; omitting it
+            asks for the default.
+
+            This method serialises with ``exclude_none=True``, so a ``None`` is
+            DROPPED rather than sent as ``null`` — for ``assignees`` that is what makes
+            omission work, but it also means ``target_date=None`` cannot express
+            "deliberately no due date": it reads as absent and you get today. Create
+            the work item, then clear the field through ``update`` to get one with no
+            due date.
+
+            Updates never default, and intake creation is excluded server-side.
         """
         response = self._post(
             f"{workspace_slug}/projects/{project_id}/work-items",
