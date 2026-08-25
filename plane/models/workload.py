@@ -14,15 +14,80 @@ from pydantic import BaseModel, ConfigDict, Field
 WorkloadGranularity = Literal["day", "week", "month"]
 
 
+class WorkloadTask(BaseModel):
+    """One work item on an assignee's row.
+
+    ``hours`` is THIS assignee's share of the estimate, not the whole thing:
+    a work item may carry several assignees and its hours split evenly
+    across them, so a shared 8h item reports 4.0 on each of two rows.
+    ``total_hours`` keeps the undivided figure.
+
+    ``unestimated`` is ``True`` when the work item has no estimate row, or
+    one with ``hours <= 0``. Such an item carries ``hours=0.0`` and
+    ``total_hours=0.0`` and contributes to NO capacity figure — every bucket
+    and total on the row is identical to a response without it.
+
+    **Do not infer ``unestimated`` from ``hours == 0``.** A stored zero-hour
+    estimate is a real, reachable state (counted separately in
+    :attr:`WorkloadMeta.zero_estimate_count`), so the arithmetic test
+    misclassifies it. The flag is always sent; an estimated row carries
+    ``False`` explicitly.
+
+    ``state_color`` is the state's own colour and is a FREE-FORM CSS colour
+    string, not a guaranteed hex — server-side it is an unvalidated
+    ``CharField``, so ``""``, ``"#fa0"``, ``"rgb(...)"`` and named colours
+    are all reachable. Do not parse it, and do not assume it is non-empty.
+    """
+
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
+
+    id: str
+    project_id: str | None = None
+    identifier: str | None = None
+    name: str | None = None
+    hours: float = 0.0
+    total_hours: float = 0.0
+    assignee_count: int = 1
+    start_date: str | None = None
+    target_date: str | None = None
+    state_group: str | None = None
+    state_name: str | None = None
+    state_color: str | None = None
+    unestimated: bool = False
+    overdue: bool = False
+
+
 class WorkloadRow(BaseModel):
-    """One assignee's scheduled hours, bucketed by period."""
+    """One assignee's scheduled hours, bucketed by period.
+
+    ``tasks`` is capped at 200 per assignee (``tasks_truncated`` reports the
+    cap being hit). It is sorted with UNESTIMATED items first, and the cap is
+    SHARED between the two kinds — so an assignee with a large unestimated
+    backlog can have estimated rows truncated away, and ``tasks[0]`` is not
+    the earliest-dated row.
+
+    An empty row is not a gap in the data: every active, non-bot member of
+    the in-scope projects gets a row whether or not they carry work, and the
+    unused ``capacity_buckets`` is the point of it — that is how the response
+    answers "who is free" as well as "who is overloaded".
+    """
 
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
     assignee_id: str | None = None
     assignee_name: str | None = None
     buckets: dict[str, float] = Field(default_factory=dict)
+    # Hours per calendar month ("2026-08"), independent of the requested
+    # granularity — a week bucket is keyed by the date its week begins, so
+    # summing week buckets for a month credits a straddling week entirely to
+    # the month it started in.
+    month_buckets: dict[str, float] = Field(default_factory=dict)
     total: float = 0.0
+    capacity_buckets: dict[str, float] = Field(default_factory=dict)
+    over: dict[str, bool] = Field(default_factory=dict)
+    total_over: bool = False
+    tasks: list["WorkloadTask"] = Field(default_factory=list)
+    tasks_truncated: bool = False
 
 
 class WorkloadUnscheduled(BaseModel):
@@ -40,8 +105,14 @@ class WorkloadMeta(BaseModel):
 
     model_config = ConfigDict(extra="allow", populate_by_name=True)
 
+    # issues_counted and issues_unscheduled describe HOURS, so they count
+    # estimated items only.
     issues_counted: int | None = None
     issues_unscheduled: int | None = None
+    # Countable in-scope items with no usable estimate. A SUPERSET of
+    # zero_estimate_count, which sees only stored rows with hours <= 0 and
+    # not items carrying no estimate row at all.
+    issues_unestimated: int | None = None
     dirty_date_count: int | None = None
     zero_estimate_count: int | None = None
     truncated: bool | None = None
@@ -54,9 +125,24 @@ class WorkloadMatrixResponse(BaseModel):
     Counts LEAF work items only — a work item with one or more countable
     sub-items never contributes its own estimate to the matrix (its
     sub-items do, individually; the parent's aggregate is available via
-    :meth:`~plane.api.workload.Workload.list_rollups`). Defaults to
-    excluding ``completed``/``cancelled`` state groups unless a
-    ``state_group`` filter was supplied on the request.
+    :meth:`~plane.api.workload.Workload.list_rollups`).
+
+    There is NO default state filter: when ``state_group`` is omitted every
+    group is returned, ``completed`` and ``cancelled`` included. An earlier
+    version of this docstring claimed the two were excluded by default; the
+    server has no such branch, and silently applying a filter the caller
+    could neither see nor clear was the bug that removed it.
+
+    ``rows`` counts PEOPLE, not work — every active, non-bot member of the
+    in-scope projects gets a row whether or not they carry anything, so
+    ``len(rows)`` is a headcount and answers nothing about whether this
+    window holds work. To ask that::
+
+        any(r.tasks or r.total for r in resp.rows)
+
+    Both halves are needed: ``total`` alone misses a member whose only work
+    is unscheduled or unestimated, and ``tasks`` alone misses hours whose
+    rows were cut by the 200-per-assignee cap.
     """
 
     model_config = ConfigDict(extra="allow", populate_by_name=True)
