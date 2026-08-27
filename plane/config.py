@@ -34,6 +34,11 @@ class Configuration:
             )
 
         self.base_path = base_path.rstrip("/") + "/api/v1"
+        # Unversioned API root — a small number of fork add-on endpoints
+        # (e.g. github_ext) mount directly under /api/ instead of the
+        # versioned /api/v1/ every other resource in this SDK targets.
+        # See BaseResource(..., versioned=False).
+        self.root_path = base_path.rstrip("/") + "/api"
         self.api_key = api_key
         self.access_token = access_token
         self.timeout = timeout
