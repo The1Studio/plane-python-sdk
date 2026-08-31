@@ -110,3 +110,30 @@ class WorkloadParentHasChildrenError(HttpError):
     """
 
     error_code: str = "PARENT_HAS_CHILDREN"
+
+
+class ModuleCascadeCapExceeded(HttpError):
+    """Raised by ``ModuleCascade.apply`` when a module cascade exceeds the
+    server's hard cap (``MAX_MODULE_CASCADE_ITEMS``).
+
+    The server answers this with HTTP 400 whose body is
+    ``{"error": "cascade exceeds MAX_MODULE_CASCADE_ITEMS", "total_live": N,
+    "cap": 100}`` and has written NOTHING — the module's own status
+    included. Surfacing it as a dedicated exception class keeps a headless
+    caller from reading the 400 as a transport failure and blindly retrying
+    it; the readable refusal names the cap and the live count.
+
+    Attributes:
+        total_live: The number of live tree nodes the cascade would have
+            written (what exceeded the cap), or ``None`` if the response body
+            didn't carry it.
+        cap: The server's ``MAX_MODULE_CASCADE_ITEMS`` value, or ``None`` if
+            the response body didn't carry it.
+    """
+
+    def __init__(self, message: str, status_code: int, response: object | None = None) -> None:
+        super().__init__(message, status_code=status_code, response=response)
+        self.total_live: int | None = (
+            response.get("total_live") if isinstance(response, dict) else None
+        )
+        self.cap: int | None = response.get("cap") if isinstance(response, dict) else None
