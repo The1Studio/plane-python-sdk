@@ -8,6 +8,7 @@ from ..api.initiatives import Initiatives
 from ..api.intake import Intake
 from ..api.labels import Labels
 from ..api.milestones import Milestones
+from ..api.module_cascade import ModuleCascade
 from ..api.modules import Modules
 from ..api.pages import Pages
 from ..api.project_templates import ProjectTemplates
@@ -66,6 +67,7 @@ class PlaneClient:
         self.states = States(self.config)
         self.milestones = Milestones(self.config)
         self.modules = Modules(self.config)
+        self.module_cascade = ModuleCascade(self.config)
         self.cycles = Cycles(self.config)
         self.estimates = Estimates(self.config)
         self.work_item_types = WorkItemTypes(self.config)

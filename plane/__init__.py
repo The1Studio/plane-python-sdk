@@ -5,6 +5,7 @@ from .api.github import GithubConfig
 from .api.initiatives import Initiatives
 from .api.labels import Labels
 from .api.milestones import Milestones
+from .api.module_cascade import ModuleCascade
 from .api.modules import Modules
 from .api.pages import Pages
 from .api.project_templates import ProjectPageTemplates, ProjectTemplates, ProjectWorkItemTemplates
@@ -39,6 +40,7 @@ from .config import Configuration
 from .errors.errors import (
     ConfigurationError,
     HttpError,
+    ModuleCascadeCapExceeded,
     PlaneError,
     WorkloadParentHasChildrenError,
 )
@@ -85,6 +87,7 @@ __all__ = [
     "Teamspaces",
     "Users",
     "Milestones",
+    "ModuleCascade",
     "Modules",
     "Cycles",
     "Estimates",
@@ -108,6 +111,7 @@ __all__ = [
     "ConfigurationError",
     "HttpError",
     "WorkloadParentHasChildrenError",
+    "ModuleCascadeCapExceeded",
     "OAuthToken",
     "OAuthAuthorizationParams",
     "OAuthTokenExchangeParams",

@@ -1,6 +1,7 @@
 from .errors import (
     ConfigurationError,
     HttpError,
+    ModuleCascadeCapExceeded,
     PlaneError,
     WorkloadParentHasChildrenError,
 )
@@ -10,4 +11,5 @@ __all__ = [
     "ConfigurationError",
     "HttpError",
     "WorkloadParentHasChildrenError",
+    "ModuleCascadeCapExceeded",
 ]
